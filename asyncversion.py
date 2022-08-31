@@ -60,7 +60,7 @@ def is_it_a_new_day():
     global previous_hour
     # get the current hour in local time using PDT (GMT-7) (the localtime call counter-intuitively gives GMT time)
     gmt_hour = time.localtime()[3]
-    local_hour = (24 + gmt_hour - 7)%24
+    local_hour = (24 + gmt_hour + int(wificonfig.GMT_OFFSET))%24
     # if the previous hour is not equal to the current hour AND the current hour is 0 then it's a new day
     if previous_hour != local_hour:
         previous_hour = local_hour

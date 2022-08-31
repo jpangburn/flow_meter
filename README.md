@@ -21,8 +21,11 @@ You can use any sensor where you can get it to produce a clean wave where the pe
 ## How to use
 
 1. Get the latest MicroPython for the Pico W installed on your pico and make sure it works normally.  Use the `Tools->Manage Packages` button to install the `picozero` package on your pico.
+
 2. Download the source code from this project.
+
 3. Open in Thonny (you can use whatever IDE you like, but Thonny is easy to upload files from)
+
 4. Edit the wificonfig.py file which looks like this:
 
 ```
@@ -30,9 +33,13 @@ COUNTRY_CODE = 'US' # change to your country code if not US
 
 SSID = 'your ssid here'
 PASSWORD = 'your wifi password here'
+
+GMT_OFFSET = '-7' # PDT is -7
 ```
-Put in the SSID and password for your own wifi
+Put in the SSID and password for your own wifi. Change the country code if you're outside the US. Use the timezone where the meter is as the GMT_OFFSET- this is used by the program to decide when a new day has occured so it can display the gallons per day.  Note that MicroPython does not have timezone support so there's no easy way to update the time for daylight savings (if your area still does that silliness, mine does sadly).
+
 5. Use `File->Save Copy...` to save this file to the pico with the name 'wificonfig.py'
+
 6. Open the `asyncversion.py` file in Thonny and run it to make sure it works.  You should see output like this:
 
 ```
@@ -51,14 +58,20 @@ executed update_latest_ticks_per_minute with -1 (or -0.0 gallons) at 19:45 GMT
 ```
 
 If you see something else, check the `errors` section below.
+
 7. Once the previous step was successful, you need to use `File->Save Copy...` to save this file to the pico as main.py (i.e. the file `asyncversion.py` gets saved to the pico as `main.py` because that's what MicroPython looks for.  If it's done correctly your save window on the Pico W should look like: <img width="801" alt="Screen Shot 2022-08-31 at 1 07 33 PM" src="https://user-images.githubusercontent.com/4357286/187772390-3725edf0-0f6f-4eb9-9ed8-fae04ef03ed2.png">
+
 8. Hook up the sensor so the ground is connected to a pico ground pin, the positive is connected to the pico's 3.3v output pin which is labeled `3V3(OUT)` on the pinout, and the yellow sensor lead is connected to the `GP0` pin, which is pin #1 (the top left pin).
+
 9. Blow in the sensor so it spins the measuring blades (you'll hear it spin) and then make sure it registers some fraction of a gallon on the next minute update.  The line `executed update_latest_ticks_per_minute with -1 (or -0.0 gallons) at 19:45 GMT` should go from -1 to some positive integer value.
+
 10. Provide power to the pico and install it wherever you want to measure your water flow.
 
 ## Web interface
 
-Having this hooked to your computer would be pretty useless, so there's a web interface.  Look at the IP address assigned to the Pico W in the output where it says something like `ip = 192.168.2.113`.  Then go to http://192.168.2.113 (except whatever your IP address is) or you can try http://pybd if you have DNS setup correctly through DHCP on your local network (many people do not so this likely won't work for you).
+Having this hooked to your computer would be pretty useless, so there's a web interface.  Look at the IP address assigned to the Pico W in the output where it says something like `ip = 192.168.2.113`.  Then go to http://192.168.2.113 (except whatever your IP address is) or you can try http://pybd if you have DNS setup correctly through DHCP on your local network (many people do not so this likely won't work for you) as `pybd` is the pico's default name.
+
+I suggest you use your router settings to assign the pico an IP address (and/or different DNS name) so you don't have to worry if the IP changes from DHCP.
 
 ## Troubleshooting
 
@@ -67,6 +80,11 @@ To troubleshoot, make sure to have it hooked up to Thonny so you can see the out
 ### Wifi error
 
 Check your SSID and PASSWORD values in the wificonfig.py file and make sure you saved it to the pico.
+
+###   File "ntptime.py", line 24, in time
+###    OSError: [Errno 110] ETIMEDOUT
+
+This error happens if your pico can't connect to an NTP server to get the current GMT time.  Make sure you have internet access from your router, but otherwise just try again- this seems to fail occasionally but is only called once when the program starts.
 
 ### ImportError: no module named 'wificonfig'
 
