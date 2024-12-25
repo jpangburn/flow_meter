@@ -214,7 +214,7 @@ async def connect_to_network(get_ntp=True):
         if get_ntp:
             ntptime.settime()
         
-        # flash the led to indicate successful connection, except if we're operating this function asynchronously
+        # flash the led to indicate successful connection
         for i in range(3):
             pico_led.on()
             await asyncio.sleep(0.3)
@@ -282,31 +282,49 @@ async def update_gallons_data():
         await asyncio.sleep(60)
         
 async def reset_network_connection():
+    # keep a handle to the webserver server object between loop iterations
+    webserver = None
     while True:
         # the network status is not trustworthy, so if you ask "if wlan.status() != 3:"
         # and expect it to change when the network is down you'll be disappointed
-        # so just reset the wifi every hour and hope for the best
-        await asyncio.sleep(3600)
-        # fully disconnect it to restart
+        # so just reset the whole network setup every ten minutes and hope for the best
         try:
-            wlan.disconnect()
-        except:
-            pass
-        # not sure if it helps to sleep a bit here, but if it does it won't hurt to be offline for 10 seconds per hour
-        await asyncio.sleep(10)
-        # try to reconnect, but don't bother to reset NTP time
-        try:
-            await connect_to_network(False)
-            print('reset_network_connection successfully reconnected to network')
+            # stop the webserver before dropping the wifi
+            if webserver is not None:
+                # close the webserver
+                print('closing webserver')
+                webserver.close()
+                await webserver.wait_closed()
+                print('webserver is closed')
+            # fully disconnect wifi to restart
+            try:
+                wlan.disconnect()
+            except:
+                pass
+            # not sure if it helps to sleep a bit here, but if it does it won't hurt to be offline for a few seconds
+            await asyncio.sleep(2)
+            # try to reconnect, but don't bother to reset NTP time
+            try:
+                await connect_to_network(False)
+                print('reset_network_connection successfully reconnected to network')
+            except Exception as e:
+                print(f'reset_network_connection failed to reconnect due to exception: {e}')
+                # re-throw this exception because we can't start the webserver if we don't have a network connection
+                raise
+
+            # start the webserver and remember the server object so we can close it on the next loop iteration
+            webserver = await asyncio.start_server(serve_client, "0.0.0.0", 80)
+            print('webserver is started')
+            await asyncio.sleep(180)
         except Exception as e:
-            print(f'reset_network_connection failed to reconnect due to exception: {e}')
+            # any exceptions here mean the network or webserver is having problems
+            print(f'Got exception in reset_network_connection loop.  Exception was: {e}')
+        
 
 async def main():
     print('Connecting to Network...')
+    # do an initial connect to get NTP time
     await connect_to_network()
-        
-    print('Setting up webserver...')
-    asyncio.create_task(asyncio.start_server(serve_client, "0.0.0.0", 80))
     
     print('Starting update task')
     asyncio.create_task(update_gallons_data())
